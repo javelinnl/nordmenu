@@ -1,0 +1,131 @@
+#!/bin/bash
+
+# ANSI Escape Codes
+COLOR_ACTIVE="\e[1;36m"  # Cyan
+COLOR_INACTIVE="\e[0;37m" # White
+COLOR_BORDER="\e[1;35m"   # Purple
+COLOR_TITLE="\e[1;33m"    # Yellow
+COLOR_RESET="\e[0m"
+
+# Menu Options
+options=("Auto (Recommended Server)" 
+         "The Netherlands" 
+         "United Kingdom" 
+         "US East Coast" 
+         "India"
+         "Disconnect")  # Added disconnect option
+
+# NordVPN Locations Map
+declare -A locations=(
+    ["Auto (Recommended Server)"]=""
+    ["The Netherlands"]="Netherlands"
+    ["United Kingdom"]="United_Kingdom"
+    ["US East Coast"]="United_States"
+    ["India"]="India"
+    ["Disconnect"]="DISCONNECT_CMD"  # Special flag
+)
+
+# Menu State
+current_selection=0
+menu_size=${#options[@]}
+
+# Box Drawing Characters
+TL="${COLOR_BORDER}╭${COLOR_RESET}"  # Top-Left
+TR="${COLOR_BORDER}╮${COLOR_RESET}"  # Top-Right
+BL="${COLOR_BORDER}╰${COLOR_RESET}"  # Bottom-Left
+BR="${COLOR_BORDER}╯${COLOR_RESET}"  # Bottom-Right
+LS="${COLOR_BORDER}├${COLOR_RESET}"  # Left-Separator
+RS="${COLOR_BORDER}┤${COLOR_RESET}"  # Right-Separator
+HZ="${COLOR_BORDER}─${COLOR_RESET}"  # Horizontal (40 characters wide)
+VT="${COLOR_BORDER}│${COLOR_RESET}"  # Vertical
+
+# Fixed-width box elements (40 characters wide)
+HZ_LONG="${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}${HZ}"
+
+SEPARATOR="${LS}${HZ_LONG}${RS}"
+
+function draw_menu() {
+    clear
+    # Title
+    echo -e "${COLOR_RESET}╭────────────────────────────────────────╮\n│   󰌾 NordVPN Connect                    │\n╰────────────────────────────────────────╯${COLOR_RESET}"
+    
+    # Top Border
+    echo -e "${TL}${HZ_LONG}${TR}"
+    
+    # Menu Items
+    for ((i=0; i<$menu_size; i++)); do
+        # Add separator between items
+        [[ $i -gt 0 ]] && echo -e "${SEPARATOR} "
+        
+        # Format menu item with padding
+        item_text="  ${options[i]} "
+        padded_text=$(printf "%-37s" "$item_text")  # 38 = 40 width - 2 borders
+        
+        if [[ $i -eq $current_selection ]]; then
+            echo -e "${VT}${COLOR_ACTIVE}» ${padded_text}${COLOR_RESET} ${VT} "
+        else
+            echo -e "${VT}   ${COLOR_INACTIVE}${padded_text}${COLOR_RESET}${VT}"
+        fi
+    done
+
+    # Bottom Border
+    echo -e "${BL}${HZ_LONG}${BR}"
+    echo
+    echo -e " ${COLOR_ACTIVE}↑/↓${COLOR_RESET} Navigate  ${COLOR_ACTIVE}⏎${COLOR_RESET} Select  ${COLOR_ACTIVE}Q${COLOR_RESET} Quit"
+}
+
+function connect_vpn() {
+    clear
+    selected_option="${options[$current_selection]}"
+    
+    if [[ "$selected_option" == "Disconnect" ]]; then
+        echo -e "${COLOR_TITLE}⌛ Disconnecting VPN...${COLOR_RESET}"
+        nordvpn disconnect
+    else
+        # Connection logic ONLY happens in else-block
+        echo -e "${COLOR_TITLE}⌛ Connecting to ${selected_option}...${COLOR_RESET}"
+        location=${locations["$selected_option"]}
+        
+        if [[ -z "$location" ]]; then
+            nordvpn connect  # Auto-connect
+        else
+            nordvpn connect "$location"
+        fi
+    fi
+    
+    echo -e "\n${COLOR_TITLE}🔒 Connection Status:${COLOR_RESET}"
+    nordvpn status
+    echo
+    read -p "Press any key to return to menu..."
+}
+
+# Initial checks
+if ! command -v nordvpn &> /dev/null; then
+    echo -e "${COLOR_ACTIVE}❌ Error: NordVPN CLI not found!${COLOR_RESET}"
+    exit 1
+fi
+
+if ! nordvpn account > /dev/null 2>&1; then
+    echo -e "${COLOR_ACTIVE}🔑 Please login to NordVPN first:${COLOR_RESET}"
+    nordvpn login
+fi
+
+# Terminal setup
+stty -echo
+trap "stty echo" EXIT
+
+# Main loop
+while true; do
+    draw_menu
+    
+    # Read input
+    read -sn 1 key
+    [[ "$key" == $'\x1b' ]] && read -sn 2 -t 1 k2 && key+="$k2"
+
+    case "$key" in
+        $'\x1b[A') ((current_selection--)); [[ $current_selection -lt 0 ]] && current_selection=$((menu_size - 1)) ;;
+        $'\x1b[B') ((current_selection++)); [[ $current_selection -ge $menu_size ]] && current_selection=0 ;;
+        '') connect_vpn ;;
+        q|Q) clear; exit 0 ;;
+    esac
+done
