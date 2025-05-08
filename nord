@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # ANSI Escape Codes
-COLOR_ACTIVE="\e[1;35m"     # Magenta
+COLOR_ACTIVE="\e[1;35m"     # Orange
 COLOR_INACTIVE="\e[0;37m"   # White
-COLOR_HEADER="\e[1;35m"     # Magenta
-COLOR_BORDER="\e[0;36m"     # Cyan
-COLOR_TITLEICON="\e[1;36m"  # Cyan
-COLOR_TITLE="\e[1;37m"      # Bright White
+COLOR_HEADER="\e[1;35m"     # Orange
+COLOR_BORDER="\e[0;36m"     # Green
+COLOR_TITLEICON="\e[1;36m"  # Green
+COLOR_TITLE="\e[1;37m"      # White
 COLOR_RESET="\e[0m"
 
 # Menu Options
@@ -43,7 +43,7 @@ for ((i=0; i<$menu_size; i++)); do
         
 
     if [[ $i -eq $current_selection ]]; then
-        echo -e " ${COLOR_BORDER}│${COLOR_ACTIVE} » ${padded_text}${COLOR_RESET}${COLOR_BORDER}│${COLOR_RESET}"
+        echo -e " ${COLOR_BORDER}│${COLOR_ACTIVE}  »${padded_text}${COLOR_RESET}${COLOR_BORDER}│${COLOR_RESET}"
     else
         echo -e " ${COLOR_BORDER}│   ${COLOR_INACTIVE}${padded_text}${COLOR_RESET}${COLOR_BORDER}│${COLOR_RESET}"
     fi
@@ -71,7 +71,7 @@ function update_selection() {
     # Update new selection
     echo -ne "\e[${new_line};1H"
 #    echo -ne "${COLOR_BORDER}│${COLOR_ACTIVE} » ${options[new_selection]}${COLOR_RESET}${COLOR_BORDER}                   │${COLOR_RESET}"
-    echo -ne " ${COLOR_BORDER}│${COLOR_ACTIVE}   » ${options[new_selection]}${COLOR_RESET}"
+    echo -ne " ${COLOR_BORDER}│${COLOR_ACTIVE}  »  ${options[new_selection]}${COLOR_RESET}"
     
     # Return cursor to bottom
     echo -ne "\e[$((3 + menu_size * 2 + 2));1H"
