@@ -1,0 +1,128 @@
+#!/bin/bash
+
+# ANSI Escape Codes
+COLOR_ACTIVE="\e[1;31m"     # Orange
+COLOR_INACTIVE="\e[0;37m"   # White
+COLOR_HEADER="\e[1;31m"     # Orange
+COLOR_BORDER="\e[0;32m"     # Green
+COLOR_TITLEICON="\e[1;32m"  # Green
+COLOR_TITLE="\e[1;37m"      # White
+COLOR_RESET="\e[0m"
+
+# Menu Options
+options=("Auto (Recommended Server)" 
+         "The Netherlands" 
+         "United Kingdom" 
+         "US East Coast" 
+         "India"
+         "Disconnect")
+
+# NordVPN Locations Map
+declare -A locations=(
+    ["Auto (Recommended Server)"]=""
+    ["The Netherlands"]="Netherlands"
+    ["United Kingdom"]="United_Kingdom"
+    ["US East Coast"]="United_States"
+    ["India"]="India"
+    ["Disconnect"]="DISCONNECT_CMD"
+)
+
+# Menu State
+current_selection=0
+menu_size=${#options[@]}
+
+# Initialize screen
+clear
+echo -e "${COLOR_HEADER}╭────────────────────────────────────────╮\n│   ${COLOR_TITLEICON}󰌾 ${COLOR_TITLE}NordVPN Connect                    ${COLOR_HEADER}│\n╰────────────────────────────────────────╯"
+echo -e "${COLOR_BORDER}╭────────────────────────────────────────╮${COLOR_RESET}"
+
+# Draw initial menu
+for ((i=0; i<$menu_size; i++)); do
+        item_text="  ${options[i]} "
+        padded_text=$(printf "%-37s" "$item_text")  # 38 = 40 width - 2 borders
+        
+
+    if [[ $i -eq $current_selection ]]; then
+        echo -e "${COLOR_BORDER}│${COLOR_ACTIVE} » ${padded_text}${COLOR_RESET}${COLOR_BORDER}│${COLOR_RESET}"
+    else
+        echo -e "${COLOR_BORDER}│   ${COLOR_INACTIVE}${padded_text}${COLOR_RESET}${COLOR_BORDER}│${COLOR_RESET}"
+    fi
+    [[ $i -lt $((menu_size-1)) ]] && echo -e "${COLOR_BORDER}├────────────────────────────────────────┤${COLOR_RESET}"
+done
+
+echo -e "${COLOR_BORDER}╰────────────────────────────────────────╯${COLOR_RESET}"
+echo -e " ${COLOR_ACTIVE}↑/↓${COLOR_RESET} Navigate  ${COLOR_ACTIVE}⏎${COLOR_RESET} Select  ${COLOR_ACTIVE}Q${COLOR_RESET} Quit"
+
+# Function to update selection
+function update_selection() {
+    local new_selection=$1
+    
+    # Calculate line positions (3 header lines + 2 lines per item)
+    local prev_line=$((5 + (current_selection * 2)))
+    local new_line=$((5 + (new_selection * 2)))
+
+
+    
+    # Update previous selection
+    echo -ne "\e[${prev_line};1H"
+#    echo -ne "${COLOR_BORDER}│   ${COLOR_INACTIVE}${options[current_selection]}${COLOR_RESET}${COLOR_BORDER}                   │${COLOR_RESET}"
+    echo -ne "${COLOR_BORDER}│     ${COLOR_INACTIVE}${options[current_selection]}${COLOR_RESET}"
+    
+    # Update new selection
+    echo -ne "\e[${new_line};1H"
+#    echo -ne "${COLOR_BORDER}│${COLOR_ACTIVE} » ${options[new_selection]}${COLOR_RESET}${COLOR_BORDER}                   │${COLOR_RESET}"
+    echo -ne "${COLOR_BORDER}│${COLOR_ACTIVE}   » ${options[new_selection]}${COLOR_RESET}"
+    
+    # Return cursor to bottom
+    echo -ne "\e[$((3 + menu_size * 2 + 2));1H"
+    
+    current_selection=$new_selection
+}
+
+# Main loop
+while true; do
+    read -sn 1 key
+    [[ "$key" == $'\x1b' ]] && read -sn 2 -t 1 k2 && key+="$k2"
+
+    case "$key" in
+        $'\x1b[A')  # Up arrow
+            new_selection=$((current_selection - 1))
+            [[ $new_selection -lt 0 ]] && new_selection=$((menu_size - 1))
+            update_selection $new_selection
+            ;;
+        $'\x1b[B')  # Down arrow
+            new_selection=$((current_selection + 1))
+            [[ $new_selection -ge $menu_size ]] && new_selection=0
+            update_selection $new_selection
+            ;;
+        '')  # Enter
+            clear
+            selected_option="${options[$current_selection]}"
+            
+            if [[ "$selected_option" == "Disconnect" ]]; then
+                echo -e "${COLOR_TITLE}⌛ Disconnecting VPN...${COLOR_RESET}"
+                nordvpn disconnect
+            else
+                echo -e "${COLOR_TITLE}⌛ Connecting to ${selected_option}...${COLOR_RESET}"
+                location=${locations["$selected_option"]}
+                if [[ -z "$location" ]]; then
+                    nordvpn connect
+                else
+                    nordvpn connect "$location"
+                fi
+            fi
+            
+            echo -e "\n${COLOR_TITLE}🔒 Connection Status:${COLOR_RESET}"
+            nordvpn status
+            echo
+            read -p "Press any key to return to menu..."
+            
+            # Redraw menu
+            exec "$0"
+            ;;
+        q|Q)
+            clear
+            exit 0
+            ;;
+    esac
+done
