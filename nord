@@ -33,7 +33,7 @@ menu_size=${#options[@]}
 
 # Initialize screen
 clear
-echo -e " ${COLOR_HEADER}╭────────────────────────────────────────╮\n │   ${COLOR_TITLEICON}󰌾 ${COLOR_TITLE}NordVPN Connect                    ${COLOR_HEADER}│\n ╰────────────────────────────────────────╯"
+echo -e " ${COLOR_HEADER}╭────────────────────────────────────────╮\n │  ${COLOR_TITLEICON}󰌾  ${COLOR_TITLE}NordVPN Connect                    ${COLOR_HEADER}│\n ╰────────────────────────────────────────╯"
 echo -e " ${COLOR_BORDER}╭────────────────────────────────────────╮${COLOR_RESET}"
 
 # Draw initial menu
