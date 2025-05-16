@@ -115,7 +115,7 @@ while true; do
             echo -e "\n${COLOR_TITLE}🔒 Connection Status:${COLOR_RESET}"
             nordvpn status
             echo
-            read -p "Press any key to return to menu..."
+            read -p "Press Enter ⏎ to return to menu..."
             
             # Redraw menu
             exec "$0"
