@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ "$#" -gt 0 ]; then
-    exec nordvpn "$@" && exit
+    exec nordvpn "$@"
 fi
 
 tput civis
@@ -9,9 +9,11 @@ trap 'tput cnorm; clear' EXIT
 # ANSI Escape Codes
 COLOR_ACTIVE="\e[1;34m"
 COLOR_INACTIVE="\e[0;37m"
-COLOR_HEADER="\e[1;34m"
+COLOR_HEADER_CONNECTED="\e[1;34m"
+COLOR_HEADER_DISCONNECTED="\e[1;31m"
 COLOR_BORDER="\e[0;90m"
-COLOR_TITLEICON="\e[1;32m"
+COLOR_TITLEICON_CONNECTED="\e[1;32m"
+COLOR_TITLEICON_DISCONNECTED="\e[1;31m"
 COLOR_TITLE="\e[1;37m"
 COLOR_GOOD="\e[1;32m"
 COLOR_BAD="\e[1;31m"
@@ -46,6 +48,7 @@ lastlocation=""
 MENU_TOP=1
 FIRST_ITEM_LINE=5
 OUTPUT_START_LINE=$((FIRST_ITEM_LINE + menu_size * 2 + 1))
+ACTION_DIVIDER_AFTER=$((menu_size - 3))
 
 move_cursor() {
     echo -ne "\e[$1;1H"
@@ -56,10 +59,20 @@ clear_from_cursor_down() {
 }
 
 draw_header() {
+    local status
+    status=$(nordvpn status 2>/dev/null)
+
     move_cursor 1
-    echo -e " ${COLOR_HEADER}╭──────────────────────────────────────╮"
-    echo -e " │  ${COLOR_TITLEICON}󰌾  ${COLOR_TITLE}NordVPN                          ${COLOR_HEADER}│"
-    echo -e " ╰──────────────────────────────────────╯"
+
+    if echo "$status" | grep -qi "disconnected"; then
+        echo -e " ${COLOR_HEADER_DISCONNECTED}╭──────────────────────────────────────╮${COLOR_RESET}"
+        echo -e " ${COLOR_HEADER_DISCONNECTED}│  ${COLOR_TITLEICON_DISCONNECTED}󱙱  ${COLOR_TITLE}NordVPN disconnected             ${COLOR_HEADER_DISCONNECTED}│${COLOR_RESET}"
+        echo -e " ${COLOR_HEADER_DISCONNECTED}╰──────────────────────────────────────╯${COLOR_RESET}"
+    else
+        echo -e " ${COLOR_HEADER_CONNECTED}╭──────────────────────────────────────╮${COLOR_RESET}"
+        echo -e " ${COLOR_HEADER_CONNECTED}│  ${COLOR_TITLEICON_CONNECTED}󰌾  ${COLOR_TITLE}NordVPN connected                ${COLOR_HEADER_CONNECTED}│${COLOR_RESET}"
+        echo -e " ${COLOR_HEADER_CONNECTED}╰──────────────────────────────────────╯${COLOR_RESET}"
+    fi
 }
 
 draw_menu_item() {
@@ -83,8 +96,14 @@ draw_menu() {
 
     for ((i=0; i<menu_size; i++)); do
         draw_menu_item "$i"
-        [[ $i -lt $((menu_size - 1)) ]] && \
-            echo -e " ${COLOR_BORDER}├──────────────────────────────────────┤${COLOR_RESET}"
+
+        if [[ $i -lt $((menu_size - 1)) ]]; then
+            if [[ $i -eq $ACTION_DIVIDER_AFTER ]]; then
+                echo -e " ${COLOR_BORDER}╞══════════════════════════════════════╡${COLOR_RESET}"
+            else
+                echo -e " ${COLOR_BORDER}├──────────────────────────────────────┤${COLOR_RESET}"
+            fi
+        fi
     done
 
     echo -e " ${COLOR_BORDER}╰──────────────────────────────────────╯${COLOR_RESET}"
@@ -102,7 +121,7 @@ update_selection() {
 show_output_header() {
     move_cursor "$OUTPUT_START_LINE"
     clear_from_cursor_down
-    echo -e "  ${COLOR_BORDER}╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶╶${COLOR_RESET}"
+    echo
 }
 
 run_selected_option() {
