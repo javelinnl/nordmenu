@@ -20,20 +20,20 @@ COLOR_BAD="\e[1;31m"
 COLOR_RESET="\e[0m"
 
 # Menu Options
-options=("Auto"
+options=("Auto P2P"
          "Netherlands"
          "Austria"
-         "US East Coast"
+         "US NY"
          "India"
          "Reconnect"
          "Disconnect")
 
 # NordVPN Locations Map
 declare -A locations=(
-    ["Auto"]=""
+    ["Auto P2P"]=""
     ["Netherlands"]="Netherlands"
     ["Austria"]="Austria"
-    ["US East Coast"]="United_States"
+    ["US NY"]="United_States New_York"
     ["India"]="India"
     ["Reconnect"]="RECONNECT_CMD"
     ["Disconnect"]="DISCONNECT_CMD"
@@ -43,6 +43,7 @@ declare -A locations=(
 current_selection=0
 menu_size=${#options[@]}
 lastlocation=""
+lastselected=""
 
 # Layout
 MENU_TOP=1
@@ -64,7 +65,7 @@ draw_header() {
 
     move_cursor 1
 
-    if echo "$status" | grep -qi "disconnected"; then
+    if [[ $status == *[Dd]isconnected* ]]; then
         echo -e " ${COLOR_HEADER_DISCONNECTED}╭──────────────────────────────────────╮${COLOR_RESET}"
         echo -e " ${COLOR_HEADER_DISCONNECTED}│  ${COLOR_TITLEICON_DISCONNECTED}󱙱  ${COLOR_TITLE}NordVPN disconnected             ${COLOR_HEADER_DISCONNECTED}│${COLOR_RESET}"
         echo -e " ${COLOR_HEADER_DISCONNECTED}╰──────────────────────────────────────╯${COLOR_RESET}"
@@ -124,6 +125,14 @@ show_output_header() {
     echo
 }
 
+run_silent() {
+    if "$@" &>/dev/null; then
+        echo -e "    ${COLOR_GOOD}✓  Success.${COLOR_RESET}"
+    else
+        echo -e "    ${COLOR_BAD}✕  Failed.${COLOR_RESET}"
+    fi
+}
+
 run_selected_option() {
     local selected_option="${options[$current_selection]}"
     local location="${locations[$selected_option]}"
@@ -132,47 +141,27 @@ run_selected_option() {
 
     if [[ "$selected_option" == "Disconnect" ]]; then
         echo -e "    ${COLOR_TITLE}⏱  Disconnecting VPN...${COLOR_RESET}"
-        nordvpn disconnect > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-                echo -e "    ${COLOR_GOOD}✓  Success.${COLOR_RESET}"
-            else
-                echo -e "    ${COLOR_BAD}✕  Failed.${COLOR_RESET}"
-            fi
+        run_silent nordvpn disconnect
 
     elif [[ "$selected_option" == "Reconnect" ]]; then
         if [[ -z "$lastlocation" ]]; then
             echo -e "    ${COLOR_BAD}   No previous location selected.${COLOR_RESET}"
         else
             echo -e "    ${COLOR_TITLE}⏱  Reconnecting to ${lastselected}...${COLOR_RESET}"
-            nordvpn disconnect  > /dev/null 2>&1
+            nordvpn disconnect &>/dev/null
             sleep 1
-            nordvpn connect "$lastlocation" > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-                echo -e "    ${COLOR_GOOD}✓  Success.${COLOR_RESET}"
-            else
-                echo -e "    ${COLOR_BAD}✕  Failed.${COLOR_RESET}"
-            fi
+            run_silent nordvpn connect "$lastlocation"
         fi
 
     else
         if [[ -z "$location" ]]; then
             echo -e "    ${COLOR_TITLE}⏱  Auto connecting...${COLOR_RESET}"
-            nordvpn connect > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-                echo -e "    ${COLOR_GOOD}✓  Success.${COLOR_RESET}"
-            else
-                echo -e "    ${COLOR_BAD}✕  Failed.${COLOR_RESET}"
-            fi
+            run_silent nordvpn connect --group P2P
         else
             lastlocation="$location"
             lastselected="$selected_option"
             echo -e "    ${COLOR_TITLE}⏱  Connecting to ${selected_option}...${COLOR_RESET}"
-            nordvpn connect "$location" > /dev/null 2>&1
-            if [ $? -eq 0 ]; then
-                echo -e "    ${COLOR_GOOD}✓  Success.${COLOR_RESET}"
-            else
-                echo -e "    ${COLOR_BAD}✕  Failed.${COLOR_RESET}"
-            fi
+            run_silent nordvpn connect "$location"
         fi
     fi
 
